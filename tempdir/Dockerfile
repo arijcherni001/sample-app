@@ -1,11 +1,14 @@
-FROM python:3.10-slim
+FROM python:3.11-slim
 
-# Mettre pip à une version stable et désactiver la barre de progression
-RUN pip install --upgrade pip==23.0.1
-RUN pip install --no-cache-dir --progress-bar=off flask
+RUN pip install --no-cache-dir flask gunicorn --progress-bar off
 
-WORKDIR /home/myapp
+COPY ./static /home/myapp/static/
+COPY ./templates /home/myapp/templates/
 COPY sample_app.py /home/myapp/
 
-EXPOSE 8080
-CMD ["python3", "sample_app.py"]
+# Définir le répertoire de travail
+WORKDIR /home/myapp
+
+EXPOSE 5050
+
+CMD ["gunicorn", "--bind", "0.0.0.0:5050", "--workers", "4", "sample_app:app"]

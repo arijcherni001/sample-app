@@ -1,41 +1,44 @@
 #!/bin/bash
 
-# Nettoyer l'ancien répertoire si existe
-rm -rf tempdir
-mkdir tempdir
-mkdir tempdir/templates
-mkdir tempdir/static
+# Créer les dossiers si ils n'existent pas
+[ ! -d tempdir ] && mkdir tempdir
+[ ! -d tempdir/templates ] && mkdir tempdir/templates
+[ ! -d tempdir/static ] && mkdir tempdir/static
 
-# --- Création du fichier Flask ---
-cat > tempdir/sample_app.py << 'EOF'
-from flask import Flask
+# Copier les fichiers
+cp sample_app.py tempdir/ 2>/dev/null
+cp -r templates/* tempdir/templates/ 2>/dev/null
+cp -r static/* tempdir/static/ 2>/dev/null
 
-app = Flask(__name__)
+# Créer le Dockerfile
+cat > tempdir/Dockerfile <<EOL
+FROM python:3.11-slim
 
-@app.route("/")
-def home():
-    return "Hello from Mini Flask App inside Docker!"
+RUN pip install --no-cache-dir flask gunicorn --progress-bar off
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8080, debug=True)
-EOF
-
-# --- Dockerfile ---
-cat > tempdir/Dockerfile << 'EOF'
-FROM python:3.10-slim
-
-# Mettre pip à une version stable et désactiver la barre de progression
-RUN pip install --upgrade pip==23.0.1
-RUN pip install --no-cache-dir --progress-bar=off flask
-
-WORKDIR /home/myapp
+COPY ./static /home/myapp/static/
+COPY ./templates /home/myapp/templates/
 COPY sample_app.py /home/myapp/
 
-EXPOSE 8080
-CMD ["python3", "sample_app.py"]
-EOF
+# Définir le répertoire de travail
+WORKDIR /home/myapp
 
-# --- Build & Run ---
-cd tempdir
+EXPOSE 5050
+
+CMD ["gunicorn", "--bind", "0.0.0.0:5050", "--workers", "4", "sample_app:app"]
+EOL
+
+# Aller dans le dossier tempdir
+cd tempdir || exit
+
+# Construire l'image Docker
 docker build -t sampleapp .
-docker run -d -p 8080:8080 sampleapp
+
+# Supprimer un conteneur existant si présent
+docker rm -f samplerunning 2>/dev/null
+
+# Lancer le conteneur sur le port 5050
+docker run -d -p 5050:5050 --name samplerunning sampleapp
+
+# Afficher les conteneurs en cours
+docker ps -a

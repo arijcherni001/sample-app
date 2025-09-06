@@ -1,10 +1,12 @@
 from flask import Flask
+from flask import request
+from flask import render_template
 
-app = Flask(__name__)
+sample = Flask(__name__)
 
-@app.route("/")
-def home():
-    return "Hello from Mini Flask App inside Docker!"
+@sample.route("/")
+def main():
+    return render_template("index.html")
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8080, debug=True)
+    sample.run(host="0.0.0.0", port=5050)
